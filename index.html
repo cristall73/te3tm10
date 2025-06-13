@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bitcoin Cristall Clock</title>
+
+    <!-- PWA META TAGS -->
+    <meta name="theme-color" content="#6d28d9">
+    <meta name="description" content="Analizza i cicli di halving di Bitcoin e calcola i potenziali guadagni.">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/f7931a/ffffff?text=B">
+    
+    <!-- PWA MANIFEST (INCORPORATO) -->
+    <link rel="manifest" href="data:application/manifest+json;base64,ew0KICAibmFtZSI6ICJCaXRjb2luIENyaXN0YWxsIENsb2NrIiwNCiAgInNob3J0X25hbWUiOiAiQlRDIGNsb2NrIiwNCiAgImRlc2NyaXB0aW9uIjogIkFuYWxpenphIGkgY2ljbGkgZGkgaGFsdmluZyBkaSBiaXRjb2luIGUgY2FsY29sYSBpcG90ZW56aWFsaSBndWFkYWduaS4iLA0KICAiaWNvbnMiOiBbDQogICAgew0KICAgICAgInNyYyI6ICJodHRwczovL3BsYWNlaG9sZC5jby8xOTJ4MTkyL2Y3OTMxYS9mZmZmZmY/dGV4dD1CIiwNCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIsDQogICAgICAic2l6ZXMiOiAiMTkyeDE5MiINCiAgICB9LA0KICAgIHsNCiAgICAgICJzcmMiOiAiaHR0cHM6Ly9wbGFjZWhvbGQuY28vNTEyeDUxMi9mNzkzMWEvZmZmZmZmP3RleHQ9QiIsDQogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLA0KICAgICAgInNpemVzIjogIjUxMng1MTIiDQogICAgfQ0KICBdLA0KICAic3RhcnRfdXJsIjogIi4iLA0KICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwNCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2YwZjJmNSIsDQogICJ0aGVtZV9jb2xvciI6ICIjNmQyOGQ5Ig0KfQ==">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
@@ -568,6 +577,107 @@
             dom.notificationText.textContent = message;
             dom.notificationBanner.style.display = 'flex';
         }
+        
+        // --- PWA SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            const serviceWorkerScript = `
+                const CACHE_NAME = 'btc-cristall-clock-cache-v1';
+                const urlsToCache = [
+                    '/', // Root of the app
+                    // We can't cache the HTML file by its full name if we are inside it,
+                    // but '/' will cache the starting page.
+                    'https://cdn.tailwindcss.com',
+                    'https://cdn.jsdelivr.net/npm/chart.js',
+                    'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns',
+                    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+                    'https://images.pexels.com/photos/844124/pexels-photo-844124.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2',
+                    'https://placehold.co/96x96/f7931a/ffffff?text=B',
+                    'https://flagcdn.com/it.svg',
+                    'https://flagcdn.com/gb.svg',
+                    'https://flagcdn.com/fr.svg',
+                    'https://flagcdn.com/es.svg'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                console.log('Opened cache');
+                                return cache.addAll(urlsToCache);
+                            })
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => {
+                                // Cache hit - return response
+                                if (response) {
+                                    return response;
+                                }
+
+                                // Not in cache, try to fetch from network
+                                return fetch(event.request).then(
+                                    networkResponse => {
+                                        // Check if we received a valid response
+                                        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
+                                            return networkResponse;
+                                        }
+
+                                        // IMPORTANT: Clone the response. A response is a stream
+                                        // and because we want the browser to consume the response
+                                        // as well as the cache consuming the response, we need
+                                        // to clone it so we have two streams.
+                                        const responseToCache = networkResponse.clone();
+
+                                        caches.open(CACHE_NAME)
+                                            .then(cache => {
+                                                cache.put(event.request, responseToCache);
+                                            });
+
+                                        return networkResponse;
+                                    }
+                                ).catch(() => {
+                                   // Offline and not in cache. We could return a custom offline page here if we had one.
+                                   console.log('Fetch failed; user is offline and resource is not in cache.');
+                                });
+                            })
+                    );
+                });
+
+                // Clean up old caches
+                self.addEventListener('activate', event => {
+                    const cacheWhitelist = [CACHE_NAME];
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+            `;
+
+            // Register the service worker from the script text
+            const blob = new Blob([serviceWorkerScript], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeDOM();
