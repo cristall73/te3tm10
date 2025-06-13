@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Cristall Clock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://images.pexels.com/photos/844124/pexels-photo-844124.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2');
+            background-color: #1a1a1a; background-size: cover; background-position: center;
+            z-index: 1000; display: flex; justify-content: center; align-items: flex-end;
+            flex-direction: column; color: white; text-align: center; transition: opacity 0.5s ease-out;
+        }
+        #splash-screen::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        #splash-text {
+            position: relative; font-size: 2.5rem; font-weight: 700;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8); padding: 0 1rem;
+            margin-bottom: 8vh; width: 100%;
+        }
+        .main-container {
+            width: 100%; max-width: 600px; margin: 20px auto; padding: 0 1rem;
+            visibility: hidden;
+        }
+        .main-container.visible { visibility: visible; }
+        #app-wrapper, #disclaimer-wrapper { display: none; }
+        #disclaimer-wrapper.visible { display: block; }
+        #disclaimer-content {
+            background-color: #ffffff; border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem; text-align: center;
+        }
+        .disclaimer-text {
+            font-size: 0.9rem; color: #718096; margin-top: 1.5rem;
+            line-height: 1.5; text-align: left;
+        }
+        .disclaimer-text strong { color: #e02424; }
+        #language-selector {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .lang-flag {
+            width: 40px;
+            height: 30px;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .lang-flag:hover {
+            transform: scale(1.1);
+        }
+        #notification-banner {
+            display: none; padding: 1rem; border-radius: 0.75rem; margin-bottom: 1rem;
+            display: flex; justify-content: space-between; align-items: center; font-weight: 500;
+        }
+        .notification-countdown { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .notification-alert { background-color: #fefcbf; color: #92400e; border: 1px solid #fde68a; }
+        #notification-close { background: none; border: none; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: inherit; }
+        .nav-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; background-color: #fff; padding: 0.5rem; border-radius: 0.75rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 1rem; }
+        .nav-button { background-color: transparent; border: none; padding: 0.5rem; font-weight: 600; color: #4a5568; cursor: pointer; border-radius: 0.5rem; transition: all 0.3s ease; font-size: 0.9rem; }
+        .nav-button.active { background-color: #6d28d9; color: white; box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3); }
+        .page-container { background-color: #ffffff; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); padding: 2rem; text-align: center; display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 600px; }
+        .page-container.active { display: flex; }
+        .label-value { margin-bottom: 0.75rem; width: 100%; text-align: left; }
+        .label-value label { font-weight: 500; color: #4a5568; font-size: 0.9rem; }
+        .label-value span { display: block; font-size: 1.1rem; font-weight: 600; color: #2d3748; }
+        .button { background-color: #6d28d9; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.3s ease; cursor: pointer; border: none; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-top: 1rem; }
+        .button:hover { background-color: #5b21b6; }
+        .button-choice { background-color: #e2e8f0; color: #4a5568; padding: 0.5rem 1rem; margin: 0.25rem; font-size: 0.9rem;}
+        .button-choice:hover { background-color: #cbd5e1; }
+        .button-choice.active { background-color: #6d28d9; color: white; }
+        .explanation-text { font-size: 0.85rem; color: #718096; margin-top: 0.75rem; line-height: 1.4; max-width: 90%; margin-left: auto; margin-right: auto; }
+        #investmentInput { border: 2px solid #cbd5e1; padding: 0.75rem 1rem; border-radius: 0.5rem; font-size: 1.25rem; text-align: center; width: 80%; max-width: 250px; margin-top: 1rem; }
+        #investmentResult { margin-top: 1.5rem; padding: 1rem; background-color: #f7fafc; border-radius: 0.5rem; width: 100%; min-height: 120px; text-align: left; line-height: 1.6; color: #4a5568; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f7931a; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="splash-screen">
+        <h1 id="splash-text"></h1>
+    </div>
+
+    <div class="main-container">
+        <div id="disclaimer-wrapper">
+             <div id="disclaimer-content">
+                <h1 id="disclaimer-title" class="text-3xl font-bold text-purple-700 mb-6"></h1>
+                <img src="https://placehold.co/96x96/f7931a/ffffff?text=B" alt="Logo Bitcoin" class="w-24 h-24 mx-auto rounded-full mb-4">
+                <p id="disclaimer-welcome" class="text-2xl font-semibold mb-4"></p>
+                <p id="disclaimer-text" class="disclaimer-text"></p>
+                <button id="acceptDisclaimerBtn" class="button"></button>
+                <div id="language-selector">
+                    <img src="https://flagcdn.com/it.svg" class="lang-flag" alt="Italiano" data-lang="it">
+                    <img src="https://flagcdn.com/gb.svg" class="lang-flag" alt="English" data-lang="en">
+                    <img src="https://flagcdn.com/fr.svg" class="lang-flag" alt="Français" data-lang="fr">
+                    <img src="https://flagcdn.com/es.svg" class="lang-flag" alt="Español" data-lang="es">
+                </div>
+            </div>
+        </div>
+
+        <div id="app-wrapper">
+            <div id="notification-banner">
+                <span id="notification-text"></span>
+                <button id="notification-close">&times;</button>
+            </div>
+            <nav class="nav-bar">
+                <button class="nav-button active" data-page="clock" id="nav-clock"></button>
+                <button class="nav-button" data-page="analysis" id="nav-analysis"></button>
+                <button class="nav-button" data-page="calculator" id="nav-calculator"></button>
+            </nav>
+            <div id="page-clock" class="page-container active"></div>
+            <div id="page-analysis" class="page-container"></div>
+            <div id="page-calculator" class="page-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- MULTILANGUAGE CONFIGURATION ---
+        let currentLang = 'it';
+        const localeMap = {
+            it: 'it-IT', en: 'en-US', fr: 'fr-FR', es: 'es-ES'
+        };
+        const translations = {
+            it: {
+                splashText: "Bitcoin, il futuro è decentralizzato!",
+                disclaimerTitle: "Bitcoin Cristall Clock",
+                disclaimerWelcome: "Benvenuto!",
+                disclaimerText: "<strong>Disclaimer Importante:</strong> Questa applicazione fornisce informazioni e simulazioni basate su dati storici e stime. <strong>Non costituisce consulenza finanziaria.</strong> Il mercato delle criptovalute è altamente volatile. Fai sempre le tue ricerche.",
+                acceptButton: "Accetto e Continuo",
+                navClock: "Orologio", navAnalysis: "Analisi", navCalculator: "Calcolatore",
+                clockTitle: "Bitcoin Cristall Clock", daysSinceMin: "{days} giorni dal minimo", nextHalvingIn: "Prossimo Halving in:", halvingExplanation: "(L'halving riduce la nuova offerta, storicamente aumentando il prezzo).", estimatedCycleHigh: "Massimo ciclo stimato:", estimatedPriceRange: "Range prezzo stimato:",
+                analysisTitle: "Analisi Cicli Halving", analysisExplanation: "Il prezzo di Bitcoin tende a seguire cicli di 4 anni, con un massimo 12-18 mesi dopo l'halving.", selectCycle: "Seleziona un ciclo:", maxPrice: "Prezzo massimo:", maxDate: "Data massimo:", minPrice: "Prezzo minimo:", minDate: "Data minima:", chartLabel: "Andamento Stimato", chartTooltipPrice: "Prezzo:",
+                calculatorTitle: "Calcolatore di Guadagno", investToday: "Se investissi oggi al prezzo di circa", investmentAmount: "Importo da investire ($):", andSellAtMax: "...e vendessi al massimo del ciclo:", sellStrategy: "La strategia si basa sul vendere during i picchi e ricomprare durante i cali.", resultDefault: "Inserisci un importo e scegli quando vendere.",
+                cyclePrefix: "Ciclo post-Halving", cycleSuffixEst: "(stima)",
+                simulationFor: "Simulazione per {cycleName}:", withInvestment: "Con <strong>{amount}</strong>, otterresti <strong>{btc} BTC</strong>.", valueAtPrice: "Valore a {price}:", gain: "Guadagno:",
+                alertMinMonth: "ATTENZIONE: Questo è il mese del minimo stimato per il {cycleName}! (Acquisto)", alertMaxMonth: "ATTENZIONE: Questo è il mese del massimo stimato per il {cycleName}! (Vendita)", countdownMax: "CONTO ALLA ROVESCIA: ~{time} al prossimo massimo di ciclo (Vendita).", countdownMin: "CONTO ALLA ROVESCIA: ~{time} al prossimo minimo di ciclo (Acquisto).",
+                timeYears: "anni", timeYear: "anno", timeMonths: "mesi", timeMonth: "mese", timeAnd: "e", timeLessThanMonth: "meno di un mese"
+            },
+            en: {
+                splashText: "Bitcoin, the future is decentralized!",
+                disclaimerTitle: "Bitcoin Crystal Clock",
+                disclaimerWelcome: "Welcome!",
+                disclaimerText: "<strong>Important Disclaimer:</strong> This application provides information and simulations based on historical data and estimates. <strong>It does not constitute financial advice.</strong> The cryptocurrency market is highly volatile. Always do your own research.",
+                acceptButton: "Accept and Continue",
+                navClock: "Clock", navAnalysis: "Analysis", navCalculator: "Calculator",
+                clockTitle: "Bitcoin Crystal Clock", daysSinceMin: "{days} days since low", nextHalvingIn: "Next Halving in:", halvingExplanation: "(The halving reduces new supply, historically increasing the price).", estimatedCycleHigh: "Estimated cycle high:", estimatedPriceRange: "Estimated price range:",
+                analysisTitle: "Halving Cycle Analysis", analysisExplanation: "Bitcoin's price tends to follow 4-year cycles, with a peak 12-18 months after the halving.", selectCycle: "Select a cycle:", maxPrice: "Maximum price:", maxDate: "Date of maximum:", minPrice: "Minimum price:", minDate: "Date of minimum:", chartLabel: "Estimated Trend", chartTooltipPrice: "Price:",
+                calculatorTitle: "Profit Calculator", investToday: "If you invested today at a price of about", investmentAmount: "Amount to invest ($):", andSellAtMax: "...and sold at the cycle's peak:", sellStrategy: "The strategy is based on selling at peaks and buying back at lows.", resultDefault: "Enter an amount and choose when to sell.",
+                cyclePrefix: "Post-Halving Cycle", cycleSuffixEst: "(estimate)",
+                simulationFor: "Simulation for {cycleName}:", withInvestment: "With <strong>{amount}</strong>, you would get <strong>{btc} BTC</strong>.", valueAtPrice: "Value at {price}:", gain: "Gain:",
+                alertMinMonth: "WARNING: This is the estimated bottom month for the {cycleName}! (Buy)", alertMaxMonth: "WARNING: This is the estimated peak month for the {cycleName}! (Sell)", countdownMax: "COUNTDOWN: ~{time} to the next cycle peak (Sell).", countdownMin: "COUNTDOWN: ~{time} to the next cycle bottom (Buy).",
+                timeYears: "years", timeYear: "year", timeMonths: "months", timeMonth: "month", timeAnd: "and", timeLessThanMonth: "less than a month"
+            },
+            fr: {
+                splashText: "Bitcoin, l'avenir est décentralisé !",
+                disclaimerTitle: "Horloge Cristal Bitcoin",
+                disclaimerWelcome: "Bienvenue !",
+                disclaimerText: "<strong>Avis de non-responsabilité important :</strong> Cette application fournit des informations et des simulations basées sur des données historiques et des estimations. <strong>Elle ne constitue pas un conseil financier.</strong> Le marché des cryptomonnaies est très volatil. Faites toujours vos propres recherches.",
+                acceptButton: "Accepter et Continuer",
+                navClock: "Horloge", navAnalysis: "Analyse", navCalculator: "Calculateur",
+                clockTitle: "Horloge Cristal Bitcoin", daysSinceMin: "{days} jours depuis le plus bas", nextHalvingIn: "Prochain Halving dans :", halvingExplanation: "(Le halving réduit la nouvelle offre, augmentant historiquement le prix).", estimatedCycleHigh: "Pic de cycle estimé :", estimatedPriceRange: "Fourchette de prix estimée :",
+                analysisTitle: "Analyse des Cycles de Halving", analysisExplanation: "Le prix du Bitcoin a tendance à suivre des cycles de 4 ans, avec un pic 12-18 mois après le halving.", selectCycle: "Sélectionnez un cycle :", maxPrice: "Prix maximum :", maxDate: "Date du maximum :", minPrice: "Prix minimum :", minDate: "Date du minimum :", chartLabel: "Tendance Estimée", chartTooltipPrice: "Prix:",
+                calculatorTitle: "Calculateur de Profits", investToday: "Si vous investissiez aujourd'hui au prix d'environ", investmentAmount: "Montant à investir ($) :", andSellAtMax: "...et vendiez au pic du cycle :", sellStrategy: "La stratégie repose sur la vente aux sommets et le rachat aux creux.", resultDefault: "Entrez un montant et choisissez quand vendre.",
+                cyclePrefix: "Cycle post-Halving", cycleSuffixEst: "(estimation)",
+                simulationFor: "Simulation pour {cycleName} :", withInvestment: "Avec <strong>{amount}</strong>, vous obtiendriez <strong>{btc} BTC</strong>.", valueAtPrice: "Valeur à {price} :", gain: "Gain :",
+                alertMinMonth: "ATTENTION : C'est le mois du creux estimé pour le {cycleName} ! (Achat)", alertMaxMonth: "ATTENTION : C'est le mois du pic estimé pour le {cycleName} ! (Vente)", countdownMax: "COMPTE À REBOURS : ~{time} jusqu'au prochain pic de cycle (Vente).", countdownMin: "COMPTE À REBOURS : ~{time} jusqu'au prochain creux de cycle (Achat).",
+                timeYears: "ans", timeYear: "an", timeMonths: "mois", timeMonth: "mois", timeAnd: "et", timeLessThanMonth: "moins d'un mois"
+            },
+            es: {
+                splashText: "¡Bitcoin, el futuro es descentralizado!",
+                disclaimerTitle: "Reloj de Cristal de Bitcoin",
+                disclaimerWelcome: "¡Bienvenido!",
+                disclaimerText: "<strong>Descargo de responsabilidad importante:</strong> Esta aplicación proporciona información y simulaciones basadas en datos históricos y estimaciones. <strong>No constituye asesoramiento financiero.</strong> El mercado de las criptomonedas es muy volátil. Siempre haga su propia investigación.",
+                acceptButton: "Aceptar y Continuar",
+                navClock: "Reloj", navAnalysis: "Análisis", navCalculator: "Calculadora",
+                clockTitle: "Reloj de Cristal de Bitcoin", daysSinceMin: "{days} días desde el mínimo", nextHalvingIn: "Próximo Halving en:", halvingExplanation: "(El halving reduce la nueva oferta, lo que históricamente aumenta el precio).", estimatedCycleHigh: "Máximo del ciclo estimado:", estimatedPriceRange: "Rango de precios estimado:",
+                analysisTitle: "Análisis de Ciclos de Halving", analysisExplanation: "El precio de Bitcoin tiende a seguir ciclos de 4 años, con un pico 12-18 meses después del halving.", selectCycle: "Seleccione un ciclo:", maxPrice: "Precio máximo:", maxDate: "Fecha del máximo:", minPrice: "Precio mínimo:", minDate: "Fecha del mínimo:", chartLabel: "Tendencia Estimada", chartTooltipPrice: "Precio:",
+                calculatorTitle: "Calculadora de Ganancias", investToday: "Si invirtieras hoy a un precio de aproximadamente", investmentAmount: "Cantidad a invertir ($):", andSellAtMax: "...y vendieras en el máximo del ciclo:", sellStrategy: "La estrategia se basa en vender en los picos y volver a comprar en las caídas.", resultDefault: "Introduzca una cantidad y elija cuándo vender.",
+                cyclePrefix: "Ciclo post-Halving", cycleSuffixEst: "(estimación)",
+                simulationFor: "Simulación para {cycleName}:", withInvestment: "Con <strong>{amount}</strong>, obtendrías <strong>{btc} BTC</strong>.", valueAtPrice: "Valor a {price}:", gain: "Ganancia:",
+                alertMinMonth: "¡ATENCIÓN: Este es el mes mínimo estimado para el {cycleName}! (Compra)", alertMaxMonth: "¡ATENCIÓN: Este es el mes máximo estimado para el {cycleName}! (Venta)", countdownMax: "CUENTA REGRESIVA: ~{time} para el próximo máximo del ciclo (Venta).", countdownMin: "CUENTA REGRESIVA: ~{time} para el próximo mínimo del ciclo (Compra).",
+                timeYears: "años", timeYear: "año", timeMonths: "meses", timeMonth: "mes", timeAnd: "y", timeLessThanMonth: "menos de un mes"
+            }
+        };
+
+        // --- GLOBAL VARIABLES ---
+        const nextHalvingDate = new Date('2028-04-19T12:00:00Z');
+        const baseHalvingCycles = [
+            { id: '2012-halving', halvingDate: '2012-11-28', cycleLowDate: '2012-11-28', maxPrice: '1163', maxDate: '2013-11-29', minPrice: '65', minDate: '2013-07-06' },
+            { id: '2016-halving', halvingDate: '2016-07-09', cycleLowDate: '2016-07-07', maxPrice: '19783', maxDate: '2017-12-17', minPrice: '600', minDate: '2016-07-07' },
+            { id: '2020-halving', halvingDate: '2020-05-11', cycleLowDate: '2020-03-12', maxPrice: '69000', maxDate: '2021-11-10', minPrice: '8000', minDate: '2020-05-10' },
+            { id: '2024-halving', halvingDate: '2024-04-19', cycleLowDate: '2022-11-21', maxPrice: '150000 - 250000', maxDate: 'Nov 2025', minPrice: '15534', minDate: 'Nov 2022' },
+            { id: '2028-halving', halvingDate: '2028-04-19', cycleLowDate: '2026-11-21', maxPrice: '500000 - 800000', maxDate: 'Oct 2029', minPrice: '100000 - 150000', minDate: 'Oct 2027' },
+            { id: '2032-halving', halvingDate: '2032-04-19', cycleLowDate: '2030-11-21', maxPrice: '1000000 - 2000000', maxDate: 'Oct 2033', minPrice: '300000 - 400000', minDate: 'Oct 2031' },
+            { id: '2036-halving', halvingDate: '2036-04-19', cycleLowDate: '2034-11-21', maxPrice: '2000000 - 5000000', maxDate: 'Oct 2037', minPrice: '600000 - 800000', minDate: 'Oct 2035' },
+            { id: '2040-halving', halvingDate: '2040-04-19', cycleLowDate: '2038-11-21', maxPrice: '4000000 - 10000000', maxDate: 'Oct 2041', minPrice: '1200000 - 1600000', minDate: 'Oct 2039' },
+            { id: '2044-halving', halvingDate: '2044-04-19', cycleLowDate: '2042-11-21', maxPrice: '8000000 - 20000000', maxDate: 'Oct 2045', minPrice: '2500000 - 3500000', minDate: 'Oct 2043' },
+            { id: '2048-halving', halvingDate: '2048-04-19', cycleLowDate: '2046-11-21', maxPrice: '15000000 - 35000000', maxDate: 'Oct 2049', minPrice: '5000000 - 7000000', minDate: 'Oct 2047' },
+            { id: '2052-halving', halvingDate: '2052-04-19', cycleLowDate: '2050-11-21', maxPrice: '25000000 - 50000000', maxDate: 'Oct 2053', minPrice: '8000000 - 12000000', minDate: 'Oct 2051' }
+        ];
+
+        let currentBtcPrice = 0;
+        let cycleChartInstance = null;
+        let dom = {};
+        let halvingCycles = [];
+
+        function getTranslatedCycles(lang) {
+            const T = translations[lang];
+            return baseHalvingCycles.map(cycle => {
+                const year = cycle.id.substring(0, 4);
+                const isEst = parseInt(year) >= 2024;
+                const name = `${T.cyclePrefix} ${year} ${isEst ? T.cycleSuffixEst : ''}`;
+                return { ...cycle, name };
+            });
+        }
+        
+        function setLanguage(lang) {
+            currentLang = lang;
+            halvingCycles = getTranslatedCycles(lang);
+            const T = translations[lang];
+            
+            document.documentElement.lang = lang;
+            dom.splashText.textContent = T.splashText;
+            dom.disclaimerTitle.textContent = T.disclaimerTitle;
+            dom.disclaimerWelcome.textContent = T.disclaimerWelcome;
+            dom.disclaimerText.innerHTML = T.disclaimerText;
+            dom.acceptDisclaimerBtn.textContent = T.acceptButton;
+            
+            if (dom.appWrapper.style.display === 'block') {
+                dom.navClock.textContent = T.navClock;
+                dom.navAnalysis.textContent = T.navAnalysis;
+                dom.navCalculator.textContent = T.navCalculator;
+                populatePages();
+                initializePageDOM();
+                showPage(document.querySelector('.nav-button.active').dataset.page, true);
+            }
+        }
+
+        function initializeDOM() {
+            dom = {
+                splashScreen: document.getElementById('splash-screen'),
+                splashText: document.getElementById('splash-text'),
+                mainContainer: document.querySelector('.main-container'),
+                appWrapper: document.getElementById('app-wrapper'),
+                disclaimerWrapper: document.getElementById('disclaimer-wrapper'),
+                disclaimerTitle: document.getElementById('disclaimer-title'),
+                disclaimerWelcome: document.getElementById('disclaimer-welcome'),
+                disclaimerText: document.getElementById('disclaimer-text'),
+                acceptDisclaimerBtn: document.getElementById('acceptDisclaimerBtn'),
+                langFlags: document.querySelectorAll('.lang-flag'),
+                pages: { clock: document.getElementById('page-clock'), analysis: document.getElementById('page-analysis'), calculator: document.getElementById('page-calculator') },
+                navClock: document.getElementById('nav-clock'),
+                navAnalysis: document.getElementById('nav-analysis'),
+                navCalculator: document.getElementById('nav-calculator'),
+                navButtons: document.querySelectorAll('.nav-button'),
+                notificationBanner: document.getElementById('notification-banner'),
+                notificationText: document.getElementById('notification-text'),
+                notificationClose: document.getElementById('notification-close'),
+            };
+        }
+        
+        function initializePageDOM() {
+             dom.currentDateTimeSpan = document.getElementById('currentDateTime');
+             dom.daysSinceCycleLowSpan = document.getElementById('daysSinceCycleLow');
+             dom.halvingCountdownSpan = document.getElementById('halvingCountdown');
+             dom.nextHalvingDateDisplaySpan = document.getElementById('nextHalvingDateDisplay');
+             dom.estimatedCycleHighDateSpan = document.getElementById('estimatedCycleHighDate');
+             dom.estimatedPriceRangeSpan = document.getElementById('estimatedPriceRange');
+             dom.hourHand = document.getElementById('hourHand');
+             dom.minuteHand = document.getElementById('minuteHand');
+             dom.secondHand = document.getElementById('secondHand');
+             dom.cycleSelect = document.getElementById('cycleSelect');
+             dom.maxPrice = document.getElementById('maxPrice');
+             dom.maxDate = document.getElementById('maxDate');
+             dom.minPrice = document.getElementById('minPrice');
+             dom.minDate = document.getElementById('minDate');
+             dom.cycleChartCanvas = document.getElementById('cycleChart');
+             dom.currentBtcPriceContainer = document.getElementById('currentBtcPriceContainer');
+             dom.investmentInput = document.getElementById('investmentInput');
+             dom.sellOptionsContainer = document.getElementById('sellOptions');
+             dom.investmentResult = document.getElementById('investmentResult');
+
+             if(dom.cycleSelect) dom.cycleSelect.addEventListener('change', updateCycleInfo);
+             if(dom.investmentInput) dom.investmentInput.addEventListener('input', () => {
+                if(dom.investmentResult) dom.investmentResult.innerHTML = `<p>${translations[currentLang].resultDefault}</p>`;
+             });
+        }
+        
+        function populatePages() {
+            const T = translations[currentLang];
+            const pageClockHTML = `<h1 class="text-3xl font-bold text-purple-700 mb-4">${T.clockTitle}</h1><div style="width: 150px; height: 150px; margin: 1rem auto; position: relative; border: 4px solid #f7931a; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; background-color: #fce7cf;"><img src="https://placehold.co/96x96/f7931a/ffffff?text=B" alt="Logo Bitcoin" style="width: 80px; height: 80px;"><div id="hourHand" style="position: absolute; background-color: #2d3748; transform-origin: 50% 100%; border-radius: 2px; z-index: 2; width: 4px; height: 40px; top: calc(50% - 40px); left: calc(50% - 2px);"></div><div id="minuteHand" style="position: absolute; background-color: #2d3748; transform-origin: 50% 100%; border-radius: 2px; z-index: 2; width: 3px; height: 60px; top: calc(50% - 60px); left: calc(50% - 1.5px);"></div><div id="secondHand" style="position: absolute; background-color: #e02424; transform-origin: 50% 100%; border-radius: 2px; z-index: 2; width: 2px; height: 65px; top: calc(50% - 65px); left: calc(50% - 1px);"></div></div><div class="clock-info text-center w-full"><p class="text-xl font-semibold mb-2" id="currentDateTime">--/--/---- --:--:--</p><p class="text-lg mb-2" id="daysSinceCycleLow"></p><p class="text-lg mb-2">${T.nextHalvingIn} <strong id="halvingCountdown">--</strong> (<span id="nextHalvingDateDisplay">--</span>)</p><p class="explanation-text text-center">${T.halvingExplanation}</p><p class="text-lg mb-2 mt-4">${T.estimatedCycleHigh} <strong id="estimatedCycleHighDate">--</strong></p><p class="text-lg mb-2">${T.estimatedPriceRange} <strong id="estimatedPriceRange">--</strong></p></div>`;
+            const pageAnalysisHTML = `<h1 class="text-3xl font-bold text-purple-700 mb-4">${T.analysisTitle}</h1><p class="explanation-text text-center mb-4">${T.analysisExplanation}</p><div class="w-full"><label for="cycleSelect" class="block text-gray-700 text-sm font-bold mb-2">${T.selectCycle}</label><select id="cycleSelect" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700"></select></div><div class="grid grid-cols-2 gap-x-4 w-full mt-4"><div class="label-value"><label>${T.maxPrice}</label><span id="maxPrice">--</span></div><div class="label-value"><label>${T.maxDate}</label><span id="maxDate">--</span></div><div class="label-value"><label>${T.minPrice}</label><span id="minPrice">--</span></div><div class="label-value"><label>${T.minDate}</label><span id="minDate">--</span></div></div><div class="w-full mt-4" style="height: 250px;"><canvas id="cycleChart"></canvas></div>`;
+            const pageCalculatorHTML = `<h1 class="text-3xl font-bold text-purple-700 mb-4">${T.calculatorTitle}</h1><p class="mb-4">${T.investToday} <strong class="text-purple-700" id="currentBtcPriceContainer"></strong>...</p><label for="investmentInput" class="font-semibold text-lg">${T.investmentAmount}</label><input type="number" id="investmentInput" placeholder="Es. 1000"><p class="font-semibold text-lg mt-4">${T.andSellAtMax}</p><div id="sellOptions" class="flex flex-wrap justify-center"></div><p class="explanation-text text-center mt-4">${T.sellStrategy}</p><div id="investmentResult" class="mt-4 p-4 bg-gray-50 rounded-lg w-full min-h-[120px] text-left"><p>${T.resultDefault}</p></div>`;
+            dom.pages.clock.innerHTML = pageClockHTML;
+            dom.pages.analysis.innerHTML = pageAnalysisHTML;
+            dom.pages.calculator.innerHTML = pageCalculatorHTML;
+        }
+        
+        function showPage(pageId, forceUpdate = false) {
+            dom.navButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.page === pageId));
+            Object.values(dom.pages).forEach(p => p.classList.remove('active'));
+            if (dom.pages[pageId]) dom.pages[pageId].classList.add('active');
+            
+            if (forceUpdate) initializePageDOM();
+
+            if (pageId === 'clock') { updateDateTimeAndClock(); updateHalvingCountdown(); updateCycleHighInfo(); }
+            else if (pageId === 'analysis') { populateCycleSelect(); updateCycleInfo(); } 
+            else if (pageId === 'calculator') { fetchBtcPrice(); populateSellOptions(); clearInvestmentResult(); }
+            updateNotificationBanner();
+        }
+        
+        async function fetchBtcPrice() {
+            if(!dom.currentBtcPriceContainer) return;
+            dom.currentBtcPriceContainer.innerHTML = `<div class="loader"></div>`;
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+                if (!response.ok) throw new Error('Network response failed');
+                const data = await response.json();
+                currentBtcPrice = data.bitcoin.usd;
+                dom.currentBtcPriceContainer.innerHTML = `$${currentBtcPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            } catch (error) { console.error("Failed to fetch BTC price:", error); dom.currentBtcPriceContainer.textContent = 'N/A'; currentBtcPrice = 0; }
+        }
+
+        function updateDateTimeAndClock() {
+            const now = new Date();
+            if(dom.currentDateTimeSpan) dom.currentDateTimeSpan.textContent = now.toLocaleString(localeMap[currentLang], { dateStyle: 'long', timeStyle: 'medium' });
+            const s = now.getSeconds(), m = now.getMinutes(), h = now.getHours();
+            if (dom.secondHand) dom.secondHand.style.transform = `rotate(${(s / 60) * 360}deg)`;
+            if (dom.minuteHand) dom.minuteHand.style.transform = `rotate(${((m + s / 60) / 60) * 360}deg)`;
+            if (dom.hourHand) dom.hourHand.style.transform = `rotate(${((h % 12 + m / 60) / 12) * 360}deg)`;
+        }
+
+        function updateHalvingCountdown() {
+            const now = new Date();
+            const diffTime = nextHalvingDate.getTime() - now.getTime();
+            if(dom.nextHalvingDateDisplaySpan) dom.nextHalvingDateDisplaySpan.textContent = nextHalvingDate.toLocaleDateString(localeMap[currentLang]);
+            if (diffTime > 0) {
+                const s = Math.floor(diffTime / 1000);
+                const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+                if(dom.halvingCountdownSpan) dom.halvingCountdownSpan.textContent = `${d}g ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m`;
+            } else if(dom.halvingCountdownSpan) dom.halvingCountdownSpan.textContent = 'Happened!';
+        }
+        
+        function updateCycleHighInfo() {
+            const currentCycle = halvingCycles.find(c => c.id === '2024-halving');
+            if (currentCycle && dom.estimatedCycleHighDateSpan) {
+                const isEst = true;
+                dom.estimatedCycleHighDateSpan.textContent = formatLocalDate(currentCycle.maxDate, isEst);
+                dom.estimatedPriceRangeSpan.textContent = formatPriceUSD(currentCycle.maxPrice, isEst);
+                const lowDate = new Date(currentCycle.cycleLowDate || '2022-11-21');
+                const days = Math.floor((new Date() - lowDate) / (1000 * 60 * 60 * 24));
+                dom.daysSinceCycleLowSpan.textContent = translations[currentLang].daysSinceMin.replace('{days}', days);
+            }
+        }
+        
+        function populateCycleSelect() {
+            if (!dom.cycleSelect) return;
+            dom.cycleSelect.innerHTML = '';
+            halvingCycles.forEach(cycle => {
+                const option = document.createElement('option');
+                option.value = cycle.id;
+                option.textContent = cycle.name;
+                dom.cycleSelect.appendChild(option);
+            });
+            dom.cycleSelect.value = '2024-halving';
+        }
+
+        function updateCycleInfo() {
+            if(!dom.cycleSelect) return;
+            const cycle = halvingCycles.find(c => c.id === dom.cycleSelect.value);
+            if (cycle) {
+                const isEst = parseInt(cycle.id.substring(0, 4)) >= 2024;
+                dom.maxPrice.textContent = formatPriceUSD(cycle.maxPrice, isEst);
+                dom.maxDate.textContent = formatLocalDate(cycle.maxDate, isEst);
+                dom.minPrice.textContent = formatPriceUSD(cycle.minPrice, isEst);
+                dom.minDate.textContent = formatLocalDate(cycle.minDate, isEst);
+                drawCycleChart(cycle);
+            }
+        }
+        
+        function drawCycleChart(cycle) {
+            if (!dom.cycleChartCanvas) return;
+            if (cycleChartInstance) cycleChartInstance.destroy();
+            const T = translations[currentLang];
+            const avgMin = parsePriceToAverage(cycle.minPrice), avgMax = parsePriceToAverage(cycle.maxPrice);
+            const ctx = dom.cycleChartCanvas.getContext('2d');
+            cycleChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [T.minPrice, 'Mid-Rise', T.maxPrice, 'Mid-Fall', 'Next ' + T.minPrice],
+                    datasets: [{
+                        label: T.chartLabel,
+                        data: [avgMin, (avgMin + avgMax) / 2, avgMax, (avgMin + avgMax) / 2, avgMin * 1.5],
+                        borderColor: '#f7931a', backgroundColor: 'rgba(247, 147, 26, 0.1)', fill: true, tension: 0.4
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { ticks: { callback: (v) => '$' + v.toLocaleString('en-US') } } 
+                    }, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { callbacks: { 
+                            label: (c) => `${T.chartTooltipPrice} ${c.parsed.y.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}` 
+                        } } 
+                    } 
+                }
+            });
+        }
+        
+        function populateSellOptions() {
+            if(!dom.sellOptionsContainer) return;
+            dom.sellOptionsContainer.innerHTML = '';
+            const futureCycles = halvingCycles.filter(c => parseInt(c.id.substring(0, 4)) >= 2028);
+            futureCycles.forEach(cycle => {
+                const btn = document.createElement('button');
+                btn.className = 'button button-choice';
+                btn.textContent = `${translations[currentLang].cyclePrefix} ${cycle.id.substring(0,4)}`;
+                btn.dataset.cycleId = cycle.id;
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.button-choice').forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    calculateInvestment(cycle.id);
+                });
+                dom.sellOptionsContainer.appendChild(btn);
+            });
+        }
+        
+        function calculateInvestment(sellCycleId) {
+            if(!dom.investmentInput || !dom.investmentResult) return;
+            const T = translations[currentLang];
+            const investmentAmount = parseFloat(dom.investmentInput.value);
+            const sellCycle = halvingCycles.find(c => c.id === sellCycleId);
+            if (!sellCycle) { dom.investmentResult.innerHTML = `<p>Error: cycle not found.</p>`; return; }
+            if (currentBtcPrice === 0) { dom.investmentResult.innerHTML = `<p>Waiting for BTC price...</p>`; return; }
+            if (!investmentAmount || investmentAmount <= 0) { dom.investmentResult.innerHTML = `<p>${T.resultDefault}</p>`; return; }
+            
+            const avgMaxPrice = parsePriceToAverage(sellCycle.maxPrice);
+            if (avgMaxPrice === 0) { dom.investmentResult.innerHTML = `<p>Data not available.</p>`; return; }
+            
+            const btcBought = investmentAmount / currentBtcPrice;
+            const potentialValue = btcBought * avgMaxPrice;
+            const profit = potentialValue - investmentAmount;
+            const f = (n) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+            const simTitle = T.simulationFor.replace('{cycleName}', sellCycle.name.split('(')[0].trim());
+            const withInvest = T.withInvestment.replace('{amount}', f(investmentAmount)).replace('{btc}', btcBought.toFixed(6));
+            const valAtPrice = T.valueAtPrice.replace('{price}', f(avgMaxPrice));
+            
+            dom.investmentResult.innerHTML = `<p><strong>${simTitle}</strong></p><ul><li class="mt-2">${withInvest}</li><li class="mt-1">${valAtPrice} <strong class="text-green-600">${f(potentialValue)}</strong>.</li><li class="mt-1"><strong>${T.gain} <span class="text-green-600 font-bold">${f(profit)}</span></strong></li></ul>`;
+        }
+        
+        function clearInvestmentResult() {
+            if(!dom.investmentResult || !dom.investmentInput) return;
+            dom.investmentResult.innerHTML = `<p>${translations[currentLang].resultDefault}</p>`;
+            dom.investmentInput.value = '';
+            document.querySelectorAll('.button-choice').forEach(b => b.classList.remove('active'));
+        }
+
+        function formatLocalDate(dateString, isEst = false) {
+            if (!dateString) return 'N/A';
+            const parsedDate = parseCycleDate(dateString);
+            const T = translations[currentLang];
+            if(parsedDate){
+                 const options = { year: 'numeric', month: 'long' };
+                 if (String(dateString).match(/^\d{4}-\d{2}-\d{2}$/)) options.day = 'numeric';
+                 return (isEst ? T.cycleSuffixEst + ' ' : '') + parsedDate.toLocaleDateString(localeMap[currentLang], options);
+            }
+            return (isEst ? T.cycleSuffixEst + ' ' : '') + dateString;
+        }
+
+        function formatPriceUSD(priceString, isEst = false) {
+            if (!priceString) return 'N/A';
+            const T = translations[currentLang];
+            const formatNumber = (num) => Number(num).toLocaleString('en-US');
+            const prefix = (isEst ? T.cycleSuffixEst + ' $' : '$');
+            if (String(priceString).includes('-')) {
+                const [low, high] = String(priceString).split('-').map(p => p.trim());
+                return prefix + `${formatNumber(low)} - $${formatNumber(high)}`;
+            }
+            return prefix + formatNumber(priceString);
+        }
+        
+        const monthMap = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+        function parseCycleDate(dateString) {
+            if (!dateString || typeof dateString !== 'string') return null;
+            try {
+                if (dateString.includes(' ')) {
+                    const [monthStr, yearStr] = dateString.split(' ');
+                    if(monthMap.hasOwnProperty(monthStr.substring(0,3))){ return new Date(parseInt(yearStr), monthMap[monthStr.substring(0,3)], 15); }
+                } else { return new Date(dateString); }
+            } catch (e) { console.error("Could not parse date:", dateString); return null; }
+            return null;
+        }
+
+        function parsePriceToAverage(priceString) {
+            if (typeof priceString !== 'string' && typeof priceString !== 'number') return 0;
+            const cleanString = String(priceString).replace(/,/g, '');
+            if (cleanString.includes('-')) {
+                const parts = cleanString.split('-').map(p => parseFloat(p.trim()));
+                return (parts[0] + parts[1]) / 2;
+            }
+            return parseFloat(cleanString) || 0;
+        }
+        
+        function timeUntil(date) {
+            const now = new Date();
+            const T = translations[currentLang];
+            let years = date.getFullYear() - now.getFullYear();
+            let months = date.getMonth() - now.getMonth();
+            if (months < 0) { years--; months += 12; }
+            let result = [];
+            if (years > 0) result.push(`${years} ${years > 1 ? T.timeYears : T.timeYear}`);
+            if (months > 0) result.push(`${months} ${months > 1 ? T.timeMonths : T.timeMonth}`);
+            return result.length > 0 ? result.join(` ${T.timeAnd} `) : T.timeLessThanMonth;
+        }
+
+        function updateNotificationBanner() {
+            if (!dom.notificationBanner) return;
+            const now = new Date();
+            const T = translations[currentLang];
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            let message = '';
+            let isAlert = false;
+            for (const cycle of halvingCycles) {
+                const minDate = parseCycleDate(cycle.minDate);
+                if (minDate && minDate.getFullYear() === currentYear && minDate.getMonth() === currentMonth) {
+                    message = T.alertMinMonth.replace('{cycleName}', cycle.name.split('(')[0].trim()); isAlert = true; break; 
+                }
+                const maxDate = parseCycleDate(cycle.maxDate);
+                if (maxDate && maxDate.getFullYear() === currentYear && maxDate.getMonth() === currentMonth) {
+                    message = T.alertMaxMonth.replace('{cycleName}', cycle.name.split('(')[0].trim()); isAlert = true; break;
+                }
+            }
+            if (!message) {
+                let nextMax = null, nextMin = null;
+                for (const cycle of halvingCycles) {
+                    const maxDate = parseCycleDate(cycle.maxDate);
+                    if (maxDate && maxDate > now && (!nextMax || maxDate < nextMax)) nextMax = maxDate;
+                    const minDate = parseCycleDate(cycle.minDate);
+                    if (minDate && minDate > now && (!nextMin || minDate < nextMin)) nextMin = minDate;
+                }
+                if (nextMax && (!nextMin || nextMax < nextMin)) { message = T.countdownMax.replace('{time}', timeUntil(nextMax));
+                } else if (nextMin) { message = T.countdownMin.replace('{time}', timeUntil(nextMin));
+                } else { message = '...'; }
+            }
+            dom.notificationBanner.classList.toggle('notification-alert', isAlert);
+            dom.notificationBanner.classList.toggle('notification-countdown', !isAlert);
+            dom.notificationText.textContent = message;
+            dom.notificationBanner.style.display = 'flex';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDOM();
+            
+            setLanguage('it'); // Always start in Italian
+
+            setTimeout(() => {
+                dom.splashScreen.style.opacity = '0';
+                setTimeout(() => {
+                    dom.splashScreen.style.display = 'none';
+                    dom.mainContainer.classList.add('visible');
+                    dom.disclaimerWrapper.classList.add('visible');
+                }, 500);
+            }, 3000);
+
+            dom.langFlags.forEach(flag => {
+                flag.addEventListener('click', (e) => {
+                    setLanguage(e.target.dataset.lang);
+                });
+            });
+
+            dom.acceptDisclaimerBtn.addEventListener('click', () => {
+                dom.disclaimerWrapper.style.display = 'none';
+                dom.appWrapper.style.display = 'block';
+
+                const T = translations[currentLang];
+                dom.navClock.textContent = T.navClock;
+                dom.navAnalysis.textContent = T.navAnalysis;
+                dom.navCalculator.textContent = T.navCalculator;
+
+                populatePages();
+                initializePageDOM();
+                
+                showPage('clock'); 
+                setInterval(updateDateTimeAndClock, 1000);
+                setInterval(updateHalvingCountdown, 30000);
+            });
+
+            dom.navButtons.forEach(button => button.addEventListener('click', (e) => showPage(e.currentTarget.dataset.page)));
+            dom.notificationClose.addEventListener('click', () => dom.notificationBanner.style.display = 'none');
+        });
+    </script>
+</body>
+</html>
