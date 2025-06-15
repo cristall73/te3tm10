@@ -10,8 +10,8 @@
     <meta name="description" content="Analizza i cicli di halving di Bitcoin e calcola i potenziali guadagni.">
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/cristall73/btc-clock/main/icon.png">
     
-    <!-- PWA MANIFEST (INCORPORATO E AGGIORNATO CON LA TUA ICONA - VERSIONE FINALE) -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIkJpdGNvaW5DcmlzdGFsbENsb2NrIiwKICAic2hvcnRfbmFtZSI6ICJCVEMgY2xvY2siLAogICJkZXNjcmlwdGlvbiI6ICJBbmFsaXp6YSBpIGNpY2xpIGRpIGhhbHZpbmcgZGkgYml0Y29pbiBlIGNhbGNvbGEgaXBvdGVuemlhbGkgZ3VhZGFnbmkuIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2NyaXN0YWxsNzMvYnRjLWNsb2NrL21haW4vaWNvbi5wbmciLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJwdXJwb3NlIjogImFueSIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2NyaXN0YWxsNzMvYnRjLWNsb2NrL21haW4vaWNvbi5wbmciLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJwdXJwb3NlIjogIm1hc2thYmxlIgogICAgfQogIF0sCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiaWQiOiAiLz91dG1fc291cmNlPXB3YSIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0LXByaW1hcnkiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmMGYyZjUiLAogICJ0aGVtZV9jb2xvciI6ICIjNmQyOGQ5IiwKICAibGF1bmNoX2hhbmRsZXIiOiB7CiAgICAiY2xpZW50X21vZGUiOiAiZm9jdXMtZXhpc3RpbmciCiAgfQp9">
+    <!-- PWA MANIFEST LINK -->
+    <link rel="manifest" href="manifest.json">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -586,6 +586,7 @@
                     '/', // Root of the app
                     // We can't cache the HTML file by its full name if we are inside it,
                     // but '/' will cache the starting page.
+                    'manifest.json', // Cache the new manifest file
                     'https://cdn.tailwindcss.com',
                     'https://cdn.jsdelivr.net/npm/chart.js',
                     'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns',
