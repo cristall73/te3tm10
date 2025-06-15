@@ -1,0 +1,23 @@
+{
+  "name": "Bitcoin Cristall Clock",
+  "short_name": "BTC Clock",
+  "description": "Analizza i cicli di halving di Bitcoin e calcola i potenziali guadagni.",
+  "start_url": "/btc-clock/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#6d28d9",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/cristall73/btc-clock/main/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/cristall73/btc-clock/main/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
